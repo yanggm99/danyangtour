@@ -1,6 +1,6 @@
 <?php
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
-include_once($board_skin_path . '/../../filter_config.php'); // 필터 설정 로드
+include_once(dirname(__FILE__) . '/../../../filter_config.php'); // 필터 설정 로드
 include_once(G5_LIB_PATH . '/thumbnail.lib.php');
 
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
@@ -12,10 +12,12 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
 
     <!-- [CUSTOM] 필터 검색 영역 -->
     <div class="filter_search_wrap" style="margin-bottom: 20px; border: 1px solid #ddd; padding: 20px; background: #fafafa; border-radius: 8px;">
-        <form name="fsearch" method="get">
+        <form name="fsearch" method="get" onsubmit="return fsearch_submit(this);">
             <input type="hidden" name="bo_table" value="<?php echo $bo_table ?>">
             <input type="hidden" name="sca" value="<?php echo $sca ?>">
             <input type="hidden" name="sop" value="and">
+            <input type="hidden" name="sfl" value="wr_1">
+            <input type="hidden" name="stx" value="">
 
             <h3 style="font-size:18px; margin-bottom:15px; font-weight:bold;">
                 <i class="fa fa-search"></i> 맞춤형 단양 여행 찾기
@@ -27,13 +29,14 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
                         <strong style="display:block; font-size:14px; margin-bottom:8px; color:#333;"><?php echo $category['label']; ?></strong>
                         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                             <?php foreach ($category['items'] as $k => $v) {
+                                $label = is_array($v) ? $v['label'] : $v;
                                 // 검색 파라미터가 있는지 확인 (예: &wr_11=1)
                                 $is_active = (isset($_GET[$k]) && $_GET[$k] == '1') ? 'checked' : '';
                                 $active_style = $is_active ? 'background:#007bff; color:#fff; border-color:#007bff;' : 'background:#fff;';
                             ?>
                                 <label class="filter_tag" style="<?php echo $active_style; ?> display:inline-block; padding:5px 10px; border:1px solid #ccc; border-radius:15px; font-size:13px; cursor:pointer;">
-                                    <input type="checkbox" name="<?php echo $k ?>" value="1" <?php echo $is_active ?> style="display:none;" onchange="this.form.submit();">
-                                    <?php echo $v ?>
+                                    <input type="checkbox" name="<?php echo $k ?>" value="1" <?php echo $is_active ?> style="display:none;" onchange="toggle_filter_tag(this);">
+                                    <?php echo $label; ?>
                                 </label>
                             <?php } ?>
                         </div>
@@ -46,6 +49,38 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
                 <button type="submit" class="btn btn_submit">검색하기</button>
             </div>
         </form>
+
+        <script>
+            function toggle_filter_tag(chk) {
+                var label = chk.parentNode;
+                if (chk.checked) {
+                    label.style.background = '#007bff';
+                    label.style.color = '#fff';
+                    label.style.borderColor = '#007bff';
+                } else {
+                    label.style.background = '#fff';
+                    label.style.color = '#333';
+                    label.style.borderColor = '#ccc';
+                }
+            }
+
+            function fsearch_submit(f) {
+                var stx_arr = [];
+                var chks = f.querySelectorAll('.filter_tag input[type="checkbox"]:checked');
+                for (var i = 0; i < chks.length; i++) {
+                    stx_arr.push(chks[i].name);
+                }
+
+                if (stx_arr.length > 0) {
+                    f.stx.value = stx_arr.join(' ');
+                    f.sfl.value = 'wr_1';
+                } else {
+                    f.stx.value = '';
+                    f.sfl.value = '';
+                }
+                return true;
+            }
+        </script>
     </div>
     <!-- // [CUSTOM] 필터 검색 영역 끝 -->
 
@@ -78,7 +113,7 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
         <!-- list content -->
         <div class="tbl_head01 tbl_wrap">
             <table>
-                <caption><?php echo $board['bo_subject'] ?> 목록</caption>
+                <caption class="sound_only"><?php echo $board['bo_subject'] ?> 목록</caption>
                 <thead>
                     <tr>
                         <th scope="col">번호</th>
@@ -98,7 +133,7 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
                     <?php
                     for ($i = 0; $i < count($list); $i++) {
                     ?>
-                        <tr class="<?php if ($list[$i]['is_notice']) echo "bo_notice"; ?>">
+                        <tr class="<?php if ($list[$i]['is_notice']) echo "bo_notice"; ?>" style="border-bottom: 2px solid #ddd;">
                             <td class="td_num">
                                 <?php
                                 if ($list[$i]['is_notice']) // 공지사항
@@ -120,21 +155,40 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
                                 if ($list[$i]['is_notice'])
                                     echo "<strong>공지</strong>";
 
-                                echo "<a href=\"" . $list[$i]['href'] . "\">";
+                                echo "<a href=\"" . $list[$i]['href'] . "\" style=\"font-size:16px; font-weight:bold; color:#333;\">";
                                 echo $list[$i]['subject'];
                                 echo "</a>";
+
+                                // [CUSTOM] 업체 기본 정보 노출 (홈페이지, 전화번호, 주소)
+                                echo '<div style="margin: 5px 0 5px 0; font-size:13px; color:#666;">';
+                                if ($list[$i]['wr_homepage']) {
+                                    echo '<div style="margin-bottom:3px;"><i class="fa fa-home" style="color:#007bff; width:15px; text-align:center;"></i> <a href="' . $list[$i]['wr_homepage'] . '" target="_blank" style="color:#007bff; text-decoration:none;">' . $list[$i]['wr_homepage'] . '</a></div>';
+                                }
+                                if ($list[$i]['wr_2']) {
+                                    echo '<div style="margin-bottom:3px;"><i class="fa fa-phone" style="color:#28a745; width:15px; text-align:center;"></i> ' . $list[$i]['wr_2'] . '</div>';
+                                }
+                                if ($list[$i]['wr_3']) {
+                                    echo '<div><i class="fa fa-map-marker" style="color:#dc3545; width:15px; text-align:center;"></i> ' . $list[$i]['wr_3'] . '</div>';
+                                }
+                                echo '</div>';
 
                                 if ($list[$i]['comment_cnt'])
                                     echo $list[$i]['comment_cnt'];
 
-                                // [CUSTOM] 목록에도 주요 태그 3개 정도 노출
+                                // [CUSTOM] 목록에도 주요 태그 노출 (모두 보이기)
                                 $shown_tags = 0;
-                                foreach ($all_filters as $key => $label) {
-                                    if (isset($list[$i][$key]) && $list[$i][$key] == '1' && $shown_tags < 3) {
-                                        echo ' <span style="font-size:11px; background:#eee; color:#555; padding:2px 5px; border-radius:3px;">#' . $label . '</span>';
+                                echo '<div class="list_tags" style="margin-top:5px;">';
+                                foreach ($all_filters as $key => $val) {
+                                    // $val은 array('label'=>..., 'keywords'=>...) 형태이므로 label 추출
+                                    $label = is_array($val) ? $val['label'] : $val;
+
+                                    // wr_1 필드에 해당 키가 포함되어 있는지 확인
+                                    if (strpos($list[$i]['wr_1'], $key) !== false) {
+                                        echo '<span style="display:inline-block; font-size:11px; background:#f1f1f1; color:#555; padding:3px 6px; border-radius:12px; margin-right:4px; margin-bottom:4px;">#' . $label . '</span>';
                                         $shown_tags++;
                                     }
                                 }
+                                echo '</div>';
                                 ?>
                             </td>
                             <td class="td_name sv_use"><?php echo $list[$i]['name'] ?></td>

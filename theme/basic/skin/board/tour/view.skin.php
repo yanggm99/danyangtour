@@ -20,6 +20,55 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
         </h2>
     </header>
 
+    <!-- [CUSTOM] Add Pension Info (Homepage, Address, Phone) -->
+    <div class="bo_v_extra_info" style="margin-top:10px; font-size:1.1em; line-height:1.6; padding: 0 10px;">
+        <?php
+        // 홈페이지 링크 처리 (wr_homepage 우선, 없으면 wr_link2(단양군청 소개페이지))
+        $homepage_url = '';
+        $is_fallback = false;
+
+        $temp_url = isset($view['wr_homepage']) ? trim($view['wr_homepage']) : '';
+        // 유효하지 않은 주소 패턴 (http://만 있거나 http://- 등) 및 최소 길이 체크
+        $is_valid = ($temp_url && !preg_match('/^https?:\/\/[-]?$/', $temp_url) && strlen($temp_url) > 10);
+
+        if ($is_valid) {
+            $homepage_url = $temp_url;
+        } elseif (isset($view['link'][2]) && $view['link'][2]) {
+            $homepage_url = $view['link'][2];
+            $is_fallback = true;
+        } elseif (isset($view['wr_link2']) && $view['wr_link2']) {
+            $homepage_url = $view['wr_link2'];
+            $is_fallback = true;
+        }
+
+        if ($homepage_url) {
+            $link_color = $is_fallback ? '#d9534f' : '#337ab7';
+        ?>
+            <p class="homepage" style="margin-bottom:5px;">
+                <i class="fa fa-home" style="color:<?php echo $link_color; ?>; width:20px; text-align:center;"></i>
+                <a href="<?php echo $homepage_url; ?>" target="_blank" style="color:<?php echo $link_color; ?>; text-decoration:underline;">
+                    <?php if ($is_fallback) echo '<span style="font-size:0.9em; font-weight:bold;">[단양군청 제휴 정보]</span> '; ?>
+                    <?php echo $homepage_url; ?>
+                </a>
+            </p>
+        <?php } ?>
+
+        <?php if ($view['wr_3']) { ?>
+            <p class="addr" style="margin-bottom:5px;">
+                <i class="fa fa-map-marker" style="color:#d9534f; width:20px; text-align:center;"></i>
+                <?php echo $view['wr_3']; ?>
+            </p>
+        <?php } ?>
+
+        <?php if ($view['wr_2']) { ?>
+            <p class="tel" style="margin-bottom:5px;">
+                <i class="fa fa-phone" style="color:#5cb85c; width:20px; text-align:center;"></i>
+                <?php echo $view['wr_2']; ?>
+            </p>
+        <?php } ?>
+    </div>
+    <!-- // [CUSTOM] End -->
+
     <section id="bo_v_info">
         <h2>페이지 정보</h2>
         <div class="profile_info">

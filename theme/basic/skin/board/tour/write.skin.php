@@ -2,7 +2,7 @@
 if (!defined('_GNUBOARD_')) exit; // 개별 페이지 접근 불가
 
 // 필터 설정 로드
-include_once($board_skin_path . '/../../filter_config.php');
+include_once(dirname(__FILE__) . '/../../../filter_config.php');
 
 // add_stylesheet('css 구문', 출력순서); 숫자가 작을 수록 먼저 출력됨
 add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">', 0);
@@ -64,45 +64,90 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
             </div>
         <?php } ?>
 
-        <div class="bo_w_tit write_div">
-            <label for="wr_subject" class="sound_only">제목<strong>필수</strong></label>
-            <div id="autosave_wrapper write_div">
-                <input type="text" name="wr_subject" value="<?php echo $subject ?>" id="wr_subject" required class="frm_input full_input required" size="50" maxlength="255" placeholder="업체명(제목)을 입력하세요">
+        <!-- [CUSTOM] 업체 기본 정보 입력 영역 (업체명, 홈페이지, 연락처, 주소 통합) -->
+        <div class="write_div" style="margin: 20px 0; border: 1px solid #e5e5e5; padding: 20px; background: #fff;">
+            <h3 style="margin-bottom: 20px; font-size: 1.2em; border-bottom: 2px solid #333; padding-bottom: 10px;">
+                <i class="fa fa-info-circle" aria-hidden="true"></i> 업체 기본 정보
+                <small style="color:#888; font-size:0.8em; font-weight:normal;">(업체명, 홈페이지, 연락처, 주소를 관리합니다)</small>
+            </h3>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                <div style="flex: 1; min-width: 100%;">
+                    <label for="wr_subject" style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">
+                        <i class="fa fa-pencil" style="color:#f0ad4e; width:20px; text-align:center;"></i> 업체명(제목)<strong>필수</strong>
+                    </label>
+                    <div id="autosave_wrapper" style="position:relative;">
+                        <input type="text" name="wr_subject" value="<?php echo $subject ?>" id="wr_subject" required class="frm_input full_input required" style="height:40px; border-radius:4px;" placeholder="업체명(제목)을 입력하세요">
+                    </div>
+                </div>
+
+                <div style="flex: 1; min-width: 300px;">
+                    <label for="wr_homepage" style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">
+                        <i class="fa fa-home" style="color:#337ab7; width:20px; text-align:center;"></i> 홈페이지 주소
+                    </label>
+                    <input type="text" name="wr_homepage" value="<?php echo $write['wr_homepage'] ?>" id="wr_homepage" class="frm_input full_input" style="height:40px; border-radius:4px;" placeholder="http:// 포함한 전체 주소 입력">
+                </div>
+
+                <div style="flex: 1; min-width: 300px;">
+                    <label for="wr_2" style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">
+                        <i class="fa fa-phone" style="color:#5cb85c; width:20px; text-align:center;"></i> 전화번호
+                    </label>
+                    <input type="text" name="wr_2" value="<?php echo $write['wr_2'] ?>" id="wr_2" class="frm_input full_input" style="height:40px; border-radius:4px;" placeholder="전화번호 입력 (예: 010-0000-0000)">
+                </div>
+
+                <div style="flex: 1; min-width: 100%;">
+                    <label for="wr_3" style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">
+                        <i class="fa fa-map-marker" style="color:#d9534f; width:20px; text-align:center;"></i> 주소
+                    </label>
+                    <input type="text" name="wr_3" value="<?php echo $write['wr_3'] ?>" id="wr_3" class="frm_input full_input" style="height:40px; border-radius:4px;" placeholder="지번 주소 또는 도로명 주소 입력">
+                </div>
             </div>
         </div>
 
-        <!-- [CUSTOM] 상세 옵션 체크박스 영역 -->
+        <!-- [CUSTOM] 상세 옵션 체크박스 영역 (태그 시스템 Ver.) -->
+        <?php
+        // [태그 시스템] 수정 모드(w=u)일 때, 저장된 옵션 가져오기
+        $saved_options = array();
+        if ($w == 'u' && $wr_id) {
+            $sql = " SELECT option_key FROM g5_write_tour_options WHERE wr_id = '{$wr_id}' ";
+            $result = sql_query($sql);
+            while ($row = sql_fetch_array($result)) {
+                $saved_options[] = $row['option_key'];
+            }
+        }
+        ?>
+
         <div class="write_div" style="margin: 20px 0; border: 1px solid #e5e5e5; padding: 20px; background: #fff;">
             <h3 style="margin-bottom: 20px; font-size: 1.2em; border-bottom: 2px solid #333; padding-bottom: 10px;">
                 <i class="fa fa-check-square-o" aria-hidden="true"></i> 상세 옵션 선택
                 <small style="color:#888; font-size:0.8em; font-weight:normal;">(해당하는 항목을 모두 체크해주세요)</small>
             </h3>
 
-            <?php foreach ($tour_filters as $key => $category) { ?>
+            <?php foreach ($tour_filters as $cat_key => $category) { ?>
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 15px; font-weight: bold; background: #f2f2f2; padding: 8px 12px; border-radius: 4px;">
                         <?php echo $category['label']; ?>
                     </h4>
                     <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                        <?php foreach ($category['items'] as $k => $v) {
-                            // 저장된 값이 있으면 체크, 없으면 해제
-                            // 그누보드 여분필드는 wr_11 처럼 필드명 그대로 사용
-                            // 체크박스 value=1 로 설정
-                            $is_checked = ($write[$k] == '1') ? 'checked' : '';
+                        <?php foreach ($category['items'] as $key => $val) {
+                            $label = is_array($val) ? $val['label'] : $val;
+
+                            // 현재 글에 저장된 태그인지 확인
+                            $checked = (in_array($key, $saved_options)) ? 'checked' : '';
                         ?>
-                            <label style="
-                        display: inline-flex; 
-                        align-items: center; 
-                        cursor: pointer; 
-                        background: #fff; 
-                        padding: 8px 12px; 
-                        border: 1px solid #ddd; 
-                        border-radius: 20px; 
-                        font-size: 14px;
-                        transition: all 0.2s;
-                    " onmouseover="this.style.borderColor='#333'" onmouseout="this.style.borderColor='#ddd'">
-                                <input type="checkbox" name="<?php echo $k ?>" value="1" <?php echo $is_checked ?> style="margin-right: 6px; transform: scale(1.2);">
-                                <?php echo $v ?>
+                            <label class="tag_check_item" style="
+                                display: inline-flex; 
+                                align-items: center; 
+                                cursor: pointer; 
+                                background: #fff; 
+                                padding: 8px 12px; 
+                                border: 1px solid #ddd; 
+                                border-radius: 20px; 
+                                font-size: 14px;
+                                transition: all 0.2s;
+                            " onmouseover="this.style.borderColor='#333'" onmouseout="this.style.borderColor='#ddd'">
+                                <input type="checkbox" name="options[]" value="<?php echo $key; ?>" <?php echo $checked; ?> style="margin-right: 6px; transform: scale(1.2);">
+                                <span><?php echo $label; ?></span>
                             </label>
                         <?php } ?>
                     </div>
@@ -111,9 +156,23 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
         </div>
         <!-- // [CUSTOM] 상세 옵션 체크박스 영역 끝 -->
 
+        <style>
+            /* 상세정보 입력창 내부 테두리 제거 및 스타일 최적화 */
+            .wr_content_container textarea,
+            .wr_content_container .cke_chrome,
+            .wr_content_container .cke_inner {
+                border: none !important;
+                box-shadow: none !important;
+                outline: none !important;
+            }
+        </style>
         <div class="write_div">
+            <h3 style="margin: 20px 15px 10px; font-size: 1.2em; border-bottom: 2px solid #333; padding-bottom: 10px;">
+                <i class="fa fa-file-text-o" aria-hidden="true"></i> 상세 정보
+                <small style="color:#888; font-size:0.8em; font-weight:normal;">(업체에 대한 자세한 설명을 입력해주세요)</small>
+            </h3>
             <label for="wr_content" class="sound_only">내용<strong>필수</strong></label>
-            <div class="wr_content <?php echo $is_dhtml_editor ? $config['cf_editor'] : ''; ?>">
+            <div class="wr_content_container <?php echo $is_dhtml_editor ? $config['cf_editor'] : ''; ?>" style="margin: 0 15px; padding: 10px; border: 1px solid #e5e5e5; border-radius: 10px; overflow: hidden; background: #fafafa;">
                 <?php if ($write_min || $write_max) { ?>
                     <!-- 최소/최대 글자 수 사용 시 -->
                     <p id="char_count_desc">이 게시판은 최소 <strong><?php echo $write_min; ?></strong>글자 이상, 최대 <strong><?php echo $write_max; ?></strong>글자 이하까지 글을 쓰실 수 있습니다.</p>
@@ -138,7 +197,23 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
     <?php } ?>
     -->
 
-        <div class="btn_confirm write_div">
+        <style>
+            /* 취소/작성완료 버튼 잘림 현상 수정 */
+            .btn_confirm .btn_cancel,
+            .btn_confirm .btn_submit {
+                display: inline-block !important;
+                width: auto !important;
+                min-width: 100px;
+                height: 45px !important;
+                line-height: 45px !important;
+                padding: 0 20px !important;
+                font-size: 15px;
+                text-align: center;
+                box-sizing: border-box;
+                vertical-align: middle;
+            }
+        </style>
+        <div class="btn_confirm write_div" style="text-align:center; padding-top:20px;">
             <a href="<?php echo $list_href ?>" class="btn_cancel btn">취소</a>
             <button type="submit" id="btn_submit" accesskey="s" class="btn_submit btn">작성완료</button>
         </div>
