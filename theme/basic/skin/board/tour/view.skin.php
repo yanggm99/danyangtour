@@ -122,9 +122,13 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
         if ($v_img_count) {
             echo "<div id=\"bo_v_img\">\n";
             for ($i = 0; $i <= count($view['file']); $i++) {
-                if ($view['file'][$i]['view']) {
-                    //echo $view['file'][$i]['view'];
-                    echo get_view_thumbnail($view['file'][$i]['view']);
+                if (isset($view['file'][$i]['file']) && $view['file'][$i]['file']) {
+                    // 원래 로직 대신 다이렉트로 이미지 파일 출력 (모서리 둥글게, 폭 100%)
+                    $img_src = $view['file'][$i]['path'] . '/' . $view['file'][$i]['file'];
+                    // 이미지 확장자 확인
+                    if (preg_match("/\.(jpe?g|gif|png|webp)$/i", $view['file'][$i]['file'])) {
+                        echo "<img src=\"{$img_src}\" alt=\"{$view['file'][$i]['content']}\" style=\"width:100%; max-width:100%; border-radius:8px; margin-bottom:15px;\">\n";
+                    }
                 }
             }
             echo "</div>\n";

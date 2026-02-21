@@ -64,6 +64,108 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
             </div>
         <?php } ?>
 
+        <!-- [CUSTOM] 자동 압축 대표 사진 업로드 영역 -->
+        <?php if ($is_file) { ?>
+            <div class="write_div" style="margin: 20px 0; border: 1px solid #e5e5e5; padding: 20px; background: #fff;">
+                <h3 style="margin-bottom: 20px; font-size: 1.2em; border-bottom: 2px solid #333; padding-bottom: 10px;">
+                    <i class="fa fa-camera" aria-hidden="true"></i> 대표 사진 등록 (최대 2장)
+                    <small style="color:#888; font-size:0.8em; font-weight:normal;">(고화질 사진을 올려도 스마트폰/PC에서 자동으로 용량이 1MB 이하로 압축되어 업로드됩니다)</small>
+                </h3>
+
+                <div style="display:flex; flex-wrap:wrap; gap:15px;">
+                    <?php
+                    // 최대 2장까지만 노출
+                    $max_file_count = (isset($file_count) && $file_count > 2) ? 2 : (isset($file_count) ? $file_count : 2);
+                    for ($i = 0; $i < $max_file_count; $i++) {
+                    ?>
+                        <div style="flex:1; min-width:300px; background:#fafafa; border:1px dashed #ccc; padding:15px; border-radius:8px;">
+                            <label for="bf_file_<?php echo $i ?>" style="display:block; margin-bottom:8px; font-weight:bold; color:#555;">
+                                <i class="fa fa-picture-o" style="color:#007bff;"></i> 메인 사진 <?php echo $i + 1 ?>
+                            </label>
+                            <input type="file" name="bf_file[]" id="bf_file_<?php echo $i ?>" title="대표 사진 <?php echo $i + 1 ?>" class="frm_file frm_input j-image-resizer" accept="image/jpeg, image/png, image/gif" style="width:100%; border:1px solid #ddd; padding:5px; background:#fff; border-radius:4px;">
+                            <?php if ($is_file_content) { ?>
+                                <input type="text" name="bf_content[]" value="<?php echo ($w == 'u') ? $file[$i]['bf_content'] : ''; ?>" title="파일 설명을 입력해주세요." class="frm_file frm_input" size="50" placeholder="위 사진에 대한 짧은 설명(선택)" style="margin-top:8px; width:100%; height:35px; border-radius:4px;">
+                            <?php } ?>
+                            <?php if ($w == 'u' && $file[$i]['file']) { ?>
+                                <div style="margin-top:10px; font-size:13px; color:#555;">
+                                    <input type="checkbox" id="bf_file_del<?php echo $i ?>" name="bf_file_del[<?php echo $i; ?>]" value="1">
+                                    <label for="bf_file_del<?php echo $i ?>"> 기존 썸네일 파일 교체/삭제: <span style="color:#e53935;"><?php echo $file[$i]['source']; ?></span></label>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    <?php } ?>
+                </div>
+
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        var inputs = document.querySelectorAll('.j-image-resizer');
+                        inputs.forEach(function(input) {
+                            input.addEventListener('change', function(e) {
+                                var file = e.target.files[0];
+                                if (!file) return;
+
+                                // 이미지 파일인지 확인
+                                if (!file.type.match(/image.*/)) {
+                                    return;
+                                }
+
+                                // 업로드 UI 피드백
+                                var originalLabel = this.previousElementSibling.innerHTML;
+                                this.previousElementSibling.innerHTML = '<i class="fa fa-spinner fa-spin" style="color:#007bff;"></i> 브라우저에서 이미지 고속 압축 중...';
+
+                                var reader = new FileReader();
+                                reader.onload = function(readerEvent) {
+                                    var image = new Image();
+                                    image.onload = function() {
+                                        var canvas = document.createElement('canvas');
+                                        var max_size = 1200; // 최대 해상도를 1200px 정도로 줄임
+                                        var width = image.width;
+                                        var height = image.height;
+
+                                        if (width > height) {
+                                            if (width > max_size) {
+                                                height *= max_size / width;
+                                                width = max_size;
+                                            }
+                                        } else {
+                                            if (height > max_size) {
+                                                width *= max_size / height;
+                                                height = max_size;
+                                            }
+                                        }
+
+                                        canvas.width = width;
+                                        canvas.height = height;
+                                        var ctx = canvas.getContext('2d');
+                                        ctx.drawImage(image, 0, 0, width, height);
+
+                                        // JPEG 80% 화질로 압축하여 새로운 Blob 생성
+                                        canvas.toBlob(function(blob) {
+                                            var filename = file.name.replace(/\.[^/.]+$/, "") + ".jpg"; // 확장자 jpg로 통일
+                                            var newFile = new File([blob], filename, {
+                                                type: 'image/jpeg',
+                                                lastModified: Date.now()
+                                            });
+
+                                            // DataTransfer 객체를 사용해 첨부된 거대 파일을 작아진 newFile로 바꿔치기
+                                            var dataTransfer = new DataTransfer();
+                                            dataTransfer.items.add(newFile);
+                                            input.files = dataTransfer.files;
+
+                                            // 피드백 복구 및 압축완료 알림표시
+                                            input.previousElementSibling.innerHTML = originalLabel + ' <span style="color:#28a745; font-size:12px; font-weight:normal;">(용량 다이어트 완료: ' + (newFile.size / 1024).toFixed(0) + 'KB)</span>';
+                                        }, 'image/jpeg', 0.82);
+                                    }
+                                    image.src = readerEvent.target.result;
+                                }
+                                reader.readAsDataURL(file);
+                            });
+                        });
+                    });
+                </script>
+            </div>
+        <?php } ?>
+
         <!-- [CUSTOM] 업체 기본 정보 입력 영역 (업체명, 홈페이지, 연락처, 주소 통합) -->
         <div class="write_div" style="margin: 20px 0; border: 1px solid #e5e5e5; padding: 20px; background: #fff;">
             <h3 style="margin-bottom: 20px; font-size: 1.2em; border-bottom: 2px solid #333; padding-bottom: 10px;">
