@@ -206,6 +206,20 @@ add_stylesheet('<link rel="stylesheet" href="' . $board_skin_url . '/style.css">
             </div>
         </div>
 
+        <!-- [CUSTOM] 추천 노출(광고) 셋팅 영역 (관리자 전용) -->
+        <?php if ($is_admin) { ?>
+            <div class="write_div" style="margin: 20px 0; border: 1px solid #ff9800; padding: 20px; background: #fff8e1;">
+                <h3 style="margin-bottom: 20px; font-size: 1.2em; border-bottom: 2px solid #ff9800; padding-bottom: 10px; color: #e65100;">
+                    <i class="fa fa-star" aria-hidden="true"></i> 프리미엄 추천 노출 (관리자 전용)
+                    <small style="color:#e65100; font-size:0.8em; font-weight:normal;">(체크 시 추천 리스트 최상단 광고석에 노출됩니다.)</small>
+                </h3>
+                <div style="display:flex; align-items:center;">
+                    <input type="checkbox" name="wr_4" id="wr_4" value="1" <?php echo ($write['wr_4'] == '1') ? 'checked' : ''; ?> style="width:20px; height:20px; margin-right:10px;">
+                    <label for="wr_4" style="font-weight:bold; font-size:15px; cursor:pointer;">이 업체를 카테고리 메뉴의 '추천' TOP 5 리스트에 프리미엄으로 고정 역방향 정렬 노출합니다.</label>
+                </div>
+            </div>
+        <?php } ?>
+
         <!-- [CUSTOM] 상세 옵션 체크박스 영역 (태그 시스템 Ver.) -->
         <?php
         // [태그 시스템] 수정 모드(w=u)일 때, 저장된 옵션 가져오기
