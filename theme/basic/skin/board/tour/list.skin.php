@@ -54,10 +54,90 @@ $is_recommend = (isset($_GET['mode']) && $_GET['mode'] == 'recommend');
 if ($is_recommend) {
     $g5['title'] = '단양 추천 코스 TOP 5';
 }
+
+// [CUSTOM] 카테고리별 업체 수 집계
+$cat_labels = array(
+    'stay' => array('label' => '숙박', 'icon' => '🏠'),
+    'food' => array('label' => '맛집/카페', 'icon' => '🍽️'),
+    'spot' => array('label' => '명소/체험', 'icon' => '📍'),
+    'etc'  => array('label' => '쇼핑/기타', 'icon' => '🛍️'),
+);
+$cat_counts = array();
+$total_all = 0;
+$sql_cat = "SELECT ca_name, COUNT(*) as cnt FROM {$write_table} WHERE wr_is_comment=0 GROUP BY ca_name";
+$res_cat = sql_query($sql_cat);
+while ($row = sql_fetch_array($res_cat)) {
+    $cat_counts[$row['ca_name']] = (int)$row['cnt'];
+    $total_all += (int)$row['cnt'];
+}
 ?>
 
 <!-- 게시판 목록 시작 { -->
 <div id="bo_list" style="width:100%">
+
+    <!-- 카테고리별 업체 수 -->
+    <style>
+        .cat-stat-bar {
+            display: flex !important;
+            visibility: visible !important;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            font-size: 14px;
+            border: 1px solid #e9ecef;
+        }
+        .cat-stat-total {
+            font-weight: 700;
+            color: #444;
+            margin-right: 6px;
+            white-space: nowrap;
+        }
+        .cat-stat-item {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            text-decoration: none !important;
+            font-weight: 600;
+            transition: opacity .15s;
+            white-space: nowrap;
+        }
+        .cat-stat-item:hover { opacity: .8; }
+        .cat-stat-stay  { background: #e8f4fd !important; color: #1a6fa8 !important; }
+        .cat-stat-food  { background: #fff3e0 !important; color: #b45309 !important; }
+        .cat-stat-spot  { background: #e8f5e9 !important; color: #2e7d32 !important; }
+        .cat-stat-etc   { background: #f3e8ff !important; color: #6b21a8 !important; }
+        .cat-stat-count {
+            background: rgba(0,0,0,.12);
+            border-radius: 10px;
+            padding: 1px 7px;
+            font-size: 12px;
+        }
+    </style>
+    <div class="cat-stat-bar">
+        <span class="cat-stat-total">&#xC804;&#xCCB4; <?php echo number_format($total_all); ?>&#xAC1C; &#xC5C5;&#xCCB4;</span>
+        <?php
+        $cat_display = array(
+            'stay' => array('label' => '&#xC219;&#xBC15;',      'icon' => '&#127968;'),
+            'food' => array('label' => '&#xB9DB;&#xC9D1;/&#xCE74;&#xD398;', 'icon' => '&#127869;'),
+            'spot' => array('label' => '&#xBA85;&#xC18C;/&#xCCB4;&#xD5D8;', 'icon' => '&#128205;'),
+            'etc'  => array('label' => '&#xC1FC;&#xD551;/&#xAE30;&#xD0C0;', 'icon' => '&#128717;'),
+        );
+        foreach ($cat_display as $key => $info):
+            $cnt = isset($cat_counts[$key]) ? $cat_counts[$key] : 0;
+        ?>
+        <a href="<?php echo G5_BBS_URL; ?>/board.php?bo_table=<?php echo $bo_table; ?>&amp;ca_name=<?php echo $key; ?>" class="cat-stat-item cat-stat-<?php echo $key; ?>">
+            <span class="cat-stat-icon"><?php echo $info['icon']; ?></span>
+            <span class="cat-stat-name"><?php echo $info['label']; ?></span>
+            <span class="cat-stat-count"><?php echo number_format($cnt); ?></span>
+        </a>
+        <?php endforeach; ?>
+    </div>
 
     <style>
         .recommend-header {
@@ -397,8 +477,6 @@ if ($is_recommend) {
         }
     </style>
 
-    </style>
-
     <?php
     $prioritized_key = '';
     if (isset($_GET['stay']) && $_GET['stay'] == '1') $prioritized_key = 'stay';
@@ -732,7 +810,13 @@ if ($is_recommend) {
                                     $thumb_url = G5_DATA_URL . '/file/' . $bo_table . '/' . $filename;
                                 }
                             } else {
-                                $thumb_url = $board_skin_url . '/img/default_pension.png';
+                                // 첨부파일 없으면 wr_7(대표 이미지 URL) 사용 (콤마 구분 목록에서 첫 번째 URL)
+                                if (!empty($row['wr_7'])) {
+                                    $wr7_urls = explode(',', $row['wr_7']);
+                                    $thumb_url = trim($wr7_urls[0]);
+                                } else {
+                                    $thumb_url = $board_skin_url . '/img/default_pension.png';
+                                }
                             }
 
                             // 링크 세팅
@@ -753,7 +837,7 @@ if ($is_recommend) {
                                         <span class="rec-rank"><?php echo $rank; ?></span>
                                     <?php } ?>
                                     <span class="view-count-badge">조회 <?php echo number_format($row['wr_hit']); ?></span>
-                                    <img src="<?php echo $thumb_url; ?>" alt="<?php echo get_text($row['wr_subject']); ?>">
+                                    <img src="<?php echo $thumb_url; ?>" alt="<?php echo get_text($row['wr_subject']); ?>" referrerpolicy="no-referrer">
                                 </a>
                                 <div class="tour-card-body">
                                     <a href="<?php echo $target_link; ?>" <?php echo $target_blank; ?> class="tour-card-title">
@@ -850,19 +934,25 @@ if ($is_recommend) {
                                 $imgs_arr[] = G5_DATA_URL . '/file/' . $board['bo_table'] . '/' . $filename;
                             }
                         }
+                        // 첨부파일 없으면 wr_content 내 첫 번째 img src 사용
+                        // 첨부파일 없으면 wr_7(대표 이미지 URL) 사용
+                        if (empty($imgs_arr) && !empty($list[$i]['wr_7'])) {
+                            $wr7_parts = explode(',', $list[$i]['wr_7']);
+                            $imgs_arr[] = trim($wr7_parts[0]);
+                        }
                         $img_count = count($imgs_arr);
                     ?>
                         <li class="tour-card-item <?php if ($list[$i]['is_notice']) echo "bo_notice"; ?>">
                             <a href="<?php echo $target_link ?>" <?php echo $target_blank ?> class="tour-card-img" style="position:relative; display:block; overflow:hidden;">
                                 <?php
                                 if ($img_count == 0) {
-                                    echo '<img src="' . $board_skin_url . '/img/default_pension.png" alt="기본 펜션 이미지" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">';
+                                    echo '<img src="' . $board_skin_url . '/img/default_pension.png" alt="기본 펜션 이미지" referrerpolicy="no-referrer" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">';
                                 } else if ($img_count == 1) {
-                                    echo '<img src="' . $imgs_arr[0] . '" alt="' . $list[$i]['subject'] . '" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">';
+                                    echo '<img src="' . $imgs_arr[0] . '" alt="' . $list[$i]['subject'] . '" referrerpolicy="no-referrer" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">';
                                 } else {
                                     // 2장일 경우 겹쳐놓고 슬라이드
-                                    echo '<img src="' . $imgs_arr[0] . '" alt="' . $list[$i]['subject'] . '" class="slider-img active-img" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; opacity:1; transition: opacity 1s ease-in-out;">';
-                                    echo '<img src="' . $imgs_arr[1] . '" alt="' . $list[$i]['subject'] . '" class="slider-img" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity 1s ease-in-out;">';
+                                    echo '<img src="' . $imgs_arr[0] . '" alt="' . $list[$i]['subject'] . '" class="slider-img active-img" referrerpolicy="no-referrer" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; opacity:1; transition: opacity 1s ease-in-out;">';
+                                    echo '<img src="' . $imgs_arr[1] . '" alt="' . $list[$i]['subject'] . '" class="slider-img" referrerpolicy="no-referrer" style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; opacity:0; transition: opacity 1s ease-in-out;">';
                                 }
                                 ?>
 
